@@ -1,6 +1,7 @@
 package dev.perfectbogus.restdocs.web.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.perfectbogus.restdocs.domain.Beer;
 import dev.perfectbogus.restdocs.repositories.BeerRepository;
 import dev.perfectbogus.restdocs.web.models.BeerDto;
 import dev.perfectbogus.restdocs.web.models.BeerStyleEnum;
@@ -14,12 +15,19 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*;
 
 @ExtendWith(RestDocumentationExtension.class)
 @AutoConfigureRestDocs
@@ -38,10 +46,12 @@ class BeerControllerTest {
 
     @Test
     void getBeerById() throws Exception {
-        mockMvc.perform(
-                MockMvcRequestBuilders.get("/api/v1/beer/" + UUID.randomUUID())
-                        .accept(MediaType.APPLICATION_JSON)
-        ).andExpect(status().isOk());
+        given(beerRepository.findById(any())).willReturn(Optional.of(Beer.builder().build()));
+        mockMvc.perform(get("/api/v1/beer/{beerId}", UUID.randomUUID()).accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andDo(document("v1/beer", pathParameters(
+                        parameterWithName("beerId").description("UUID of desired beer to get.")
+                )));
     }
 
     @Test
@@ -50,10 +60,11 @@ class BeerControllerTest {
         String beerDtoJson = objectMapper.writeValueAsString(beerDto);
 
         mockMvc.perform(
-                MockMvcRequestBuilders.post("/api/v1/beer/")
+                post("/api/v1/beer/")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(beerDtoJson))
                 .andExpect(status().isCreated());
+        ;
 
     }
 
@@ -63,13 +74,13 @@ class BeerControllerTest {
         String beerDtoJson = objectMapper.writeValueAsString(beerDto);
 
         mockMvc.perform(
-                MockMvcRequestBuilders.put("/api/v1/beer/" + UUID.randomUUID())
+                put("/api/v1/beer/" + UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(beerDtoJson))
                 .andExpect(status().isNoContent());
     }
 
-    private BeerDto getValidBeerDto(){
+    private BeerDto getValidBeerDto() {
         return BeerDto.builder()
                 .beerName("Corona")
                 .beerStyle(BeerStyleEnum.ALE)
